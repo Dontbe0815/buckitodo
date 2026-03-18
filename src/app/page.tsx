@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, ChevronDown, ChevronUp, X, ClipboardList, Loader2, Check, AlertCircle, Bug, Clock, Flag, Pencil, Moon, Sun, Monitor } from 'lucide-react'
+import { Plus, ChevronDown, ChevronUp, X, ClipboardList, Loader2, Check, AlertCircle, Bug, Clock, Flag, Pencil, Sun, Moon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -45,66 +45,57 @@ interface Todo {
   updatedAt: string
 }
 
-const statusConfig: Record<TodoStatus, { label: string; shortLabel: string; color: string; bgColor: string; darkBgColor: string; icon: React.ReactNode }> = {
+const statusConfig: Record<TodoStatus, { label: string; shortLabel: string; color: string; bgColor: string; icon: React.ReactNode }> = {
   TODO: { 
     label: 'ToDo', 
     shortLabel: 'ToDo', 
     color: 'text-slate-700 dark:text-slate-300', 
     bgColor: 'bg-slate-100 dark:bg-slate-700',
-    darkBgColor: 'dark:bg-slate-700',
     icon: <Clock className="w-4 h-4" />
   },
   IN_PROGRESS: { 
     label: 'In Bearbeitung', 
     shortLabel: 'Laufend', 
     color: 'text-amber-700 dark:text-amber-400', 
-    bgColor: 'bg-amber-100 dark:bg-amber-900/50',
-    darkBgColor: 'dark:bg-amber-900/50',
+    bgColor: 'bg-amber-100 dark:bg-amber-900/40',
     icon: <AlertCircle className="w-4 h-4" />
   },
   BUGS: { 
     label: 'Bugs', 
     shortLabel: 'Bugs', 
     color: 'text-red-700 dark:text-red-400', 
-    bgColor: 'bg-red-100 dark:bg-red-900/50',
-    darkBgColor: 'dark:bg-red-900/50',
+    bgColor: 'bg-red-100 dark:bg-red-900/40',
     icon: <Bug className="w-4 h-4" />
   },
   COMPLETE: { 
     label: 'Komplett', 
     shortLabel: 'Fertig', 
     color: 'text-emerald-700 dark:text-emerald-400', 
-    bgColor: 'bg-emerald-100 dark:bg-emerald-900/50',
-    darkBgColor: 'dark:bg-emerald-900/50',
+    bgColor: 'bg-emerald-100 dark:bg-emerald-900/40',
     icon: <Check className="w-4 h-4" />
   },
 }
 
-const priorityConfig: Record<Priority, { label: string; color: string; bgColor: string; borderColor: string; darkBorderColor: string }> = {
+const priorityConfig: Record<Priority, { label: string; color: string; bgColor: string; borderColor: string }> = {
   LOW: { 
     label: 'Niedrig', 
     color: 'text-slate-600 dark:text-slate-400', 
-    bgColor: 'bg-slate-50 dark:bg-slate-800',
-    borderColor: 'border-slate-200',
-    darkBorderColor: 'dark:border-slate-600'
+    bgColor: 'bg-slate-100 dark:bg-slate-700',
+    borderColor: 'border-slate-200 dark:border-slate-600'
   },
   MEDIUM: { 
     label: 'Mittel', 
     color: 'text-amber-600 dark:text-amber-400', 
-    bgColor: 'bg-amber-50 dark:bg-amber-900/30',
-    borderColor: 'border-amber-200',
-    darkBorderColor: 'dark:border-amber-700'
+    bgColor: 'bg-amber-100 dark:bg-amber-900/40',
+    borderColor: 'border-amber-200 dark:border-amber-700'
   },
   HIGH: { 
     label: 'Hoch', 
     color: 'text-red-600 dark:text-red-400', 
-    bgColor: 'bg-red-50 dark:bg-red-900/30',
-    borderColor: 'border-red-200',
-    darkBorderColor: 'dark:border-red-700'
+    bgColor: 'bg-red-100 dark:bg-red-900/40',
+    borderColor: 'border-red-200 dark:border-red-700'
   },
 }
-
-type Theme = 'light' | 'dark' | 'system'
 
 export default function Home() {
   const [todos, setTodos] = useState<Todo[]>([])
@@ -117,74 +108,21 @@ export default function Home() {
   const [isAdding, setIsAdding] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
-  // Edit Modal State
-  const [editTodo, setEditTodo] = useState<Todo | null>(null)
+  // Edit state
+  const [editTodoId, setEditTodoId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   
-  // Theme State
-  const [theme, setTheme] = useState<Theme>('system')
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light')
-
-  // Theme detection and application
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') as Theme | null
-    if (savedTheme) {
-      setTheme(savedTheme)
-    }
-  }, [])
-
-  useEffect(() => {
-    const updateResolvedTheme = () => {
-      let resolved: 'light' | 'dark'
-      if (theme === 'system') {
-        resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-      } else {
-        resolved = theme
-      }
-      setResolvedTheme(resolved)
-      
-      if (resolved === 'dark') {
-        document.documentElement.classList.add('dark')
-      } else {
-        document.documentElement.classList.remove('dark')
-      }
-    }
-    
-    updateResolvedTheme()
-    
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    const handleChange = () => {
-      if (theme === 'system') {
-        updateResolvedTheme()
-      }
-    }
-    
-    mediaQuery.addEventListener('change', handleChange)
-    return () => mediaQuery.removeEventListener('change', handleChange)
-  }, [theme])
-
-  const cycleTheme = () => {
-    const themes: Theme[] = ['light', 'dark', 'system']
-    const currentIndex = themes.indexOf(theme)
-    const nextTheme = themes[(currentIndex + 1) % themes.length]
-    setTheme(nextTheme)
-    localStorage.setItem('theme', nextTheme)
-  }
-
-  const ThemeIcon = () => {
-    if (theme === 'system') {
-      return <Monitor className="w-5 h-5" />
-    }
-    return resolvedTheme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />
-  }
+  // Dark mode state
+  const [isDarkMode, setIsDarkMode] = useState(false)
 
   const fetchTodos = async () => {
     try {
       const response = await fetch('/api/todos')
       const data = await response.json()
       
+      // Check if data is an array
       if (!Array.isArray(data)) {
         console.error('API returned non-array:', data)
         setError('Fehler beim Laden der Aufgaben')
@@ -213,6 +151,28 @@ export default function Home() {
       setIsLoading(false)
     }
   }
+
+  // Initialize dark mode from system preference or localStorage
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme')
+    if (savedTheme) {
+      setIsDarkMode(savedTheme === 'dark')
+    } else {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+      setIsDarkMode(prefersDark)
+    }
+  }, [])
+
+  // Apply dark mode class to document
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark')
+      localStorage.setItem('theme', 'dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+      localStorage.setItem('theme', 'light')
+    }
+  }, [isDarkMode])
 
   useEffect(() => {
     fetchTodos()
@@ -286,34 +246,6 @@ export default function Home() {
     }
   }
 
-  const openEditModal = (todo: Todo) => {
-    setEditTodo(todo)
-    setEditTitle(todo.title)
-    setEditDescription(todo.description || '')
-  }
-
-  const saveEdit = async () => {
-    if (!editTodo || !editTitle.trim()) return
-    setIsSaving(true)
-    try {
-      await fetch(`/api/todos/${editTodo.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          title: editTitle, 
-          description: editDescription || null 
-        }),
-      })
-      await fetchTodos()
-      setEditTodo(null)
-    } catch (error) {
-      console.error('Fehler beim Speichern:', error)
-      setError('Fehler beim Speichern der Änderungen')
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
   const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id)
   }
@@ -332,27 +264,65 @@ export default function Home() {
     await updatePriority(id, nextPriority)
   }
 
+  const startEdit = (todo: Todo) => {
+    setEditTodoId(todo.id)
+    setEditTitle(todo.title)
+    setEditDescription(todo.description || '')
+  }
+
+  const saveEdit = async () => {
+    if (!editTodoId || !editTitle.trim()) return
+    setIsSaving(true)
+    try {
+      await fetch(`/api/todos/${editTodoId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: editTitle, description: editDescription }),
+      })
+      await fetchTodos()
+      setEditTodoId(null)
+      setEditTitle('')
+      setEditDescription('')
+    } catch (error) {
+      console.error('Fehler beim Speichern:', error)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const cancelEdit = () => {
+    setEditTodoId(null)
+    setEditTitle('')
+    setEditDescription('')
+  }
+
+  const toggleDarkMode = () => {
+    setIsDarkMode(!isDarkMode)
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-colors duration-300">
       <div className="pb-safe">
         <div className="max-w-3xl mx-auto px-3 sm:px-4 py-6 sm:py-12">
           {/* Header */}
           <div className="text-center mb-6 sm:mb-12 relative">
-            {/* Theme Toggle Button */}
+            {/* Dark Mode Toggle */}
             <button
-              onClick={cycleTheme}
-              className="absolute right-0 top-0 p-2 rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-              title={theme === 'system' ? 'System' : theme === 'dark' ? 'Dunkel' : 'Hell'}
+              onClick={toggleDarkMode}
+              className="absolute right-0 top-0 w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white dark:bg-slate-700 shadow-md border border-slate-200 dark:border-slate-600 flex items-center justify-center hover:scale-105 transition-all duration-200"
+              aria-label={isDarkMode ? 'Light Mode' : 'Dark Mode'}
             >
-              <span className="text-slate-600 dark:text-slate-300">
-                <ThemeIcon />
-              </span>
+              {isDarkMode ? (
+                <Sun className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500" />
+              ) : (
+                <Moon className="w-5 h-5 sm:w-6 sm:h-6 text-slate-600" />
+              )}
             </button>
             
             <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg shadow-violet-500/30 mb-3 sm:mb-4">
               <ClipboardList className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
             </div>
-            <h1 className="text-2xl sm:text-4xl font-bold text-slate-800 dark:text-white mb-1 sm:mb-2">
+            <h1 className="text-2xl sm:text-4xl font-bold text-slate-800 dark:text-slate-100 mb-1 sm:mb-2">
               Team To-Do Liste
             </h1>
             <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400">
@@ -362,26 +332,26 @@ export default function Home() {
 
           {/* Error Message */}
           {error && (
-            <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl mb-4 text-sm">
+            <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-xl mb-4 text-sm">
               {error}
             </div>
           )}
 
           {/* Neues Todo Formular */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-3 sm:p-6 mb-4 sm:mb-6 transition-colors">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-3 sm:p-6 mb-4 sm:mb-6 transition-colors duration-300">
             <div className="flex flex-col gap-3 sm:gap-4">
               <Input
                 placeholder="Neue Aufgabe hinzufügen..."
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && addTodo()}
-                className="text-base sm:text-lg border-0 bg-slate-50 dark:bg-slate-700 focus:bg-white dark:focus:bg-slate-600 focus:ring-2 focus:ring-violet-500/20 px-3 sm:px-4 py-3 h-12 sm:h-auto text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                className="text-base sm:text-lg border-0 bg-slate-50 dark:bg-slate-700 dark:text-slate-100 dark:placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-600 focus:ring-2 focus:ring-violet-500/20 px-3 sm:px-4 py-3 h-12 sm:h-auto"
               />
               <Textarea
                 placeholder="Beschreibung (optional)"
                 value={newDescription}
                 onChange={(e) => setNewDescription(e.target.value)}
-                className="min-h-[80px] border-0 bg-slate-50 dark:bg-slate-700 focus:bg-white dark:focus:bg-slate-600 focus:ring-2 focus:ring-violet-500/20 resize-none px-3 sm:px-4 py-3 text-base text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                className="min-h-[80px] border-0 bg-slate-50 dark:bg-slate-700 dark:text-slate-100 dark:placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-600 focus:ring-2 focus:ring-violet-500/20 resize-none px-3 sm:px-4 py-3 text-base"
               />
               
               {/* Priority Select */}
@@ -392,15 +362,15 @@ export default function Home() {
                   onValueChange={(value) => setNewPriority(value as Priority)}
                 >
                   <SelectTrigger className={cn(
-                    "flex-1 sm:w-40 border-0 font-medium",
+                    "flex-1 sm:w-40 border-0 font-medium dark:border-slate-600",
                     priorityConfig[newPriority].color,
                     priorityConfig[newPriority].bgColor
                   )}>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+                  <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
                     {Object.entries(priorityConfig).map(([key, config]) => (
-                      <SelectItem key={key} value={key} className="hover:bg-slate-100 dark:hover:bg-slate-700">
+                      <SelectItem key={key} value={key} className="dark:focus:bg-slate-700">
                         <span className={config.color}>{config.label}</span>
                       </SelectItem>
                     ))}
@@ -443,7 +413,7 @@ export default function Home() {
                     "bg-white dark:bg-slate-800 rounded-xl border transition-all duration-300 overflow-hidden",
                     todo.status === 'COMPLETE' 
                       ? "border-slate-200 dark:border-slate-700 opacity-70" 
-                      : cn("shadow-sm active:shadow-md", priorityConfig[todo.priority].borderColor, priorityConfig[todo.priority].darkBorderColor)
+                      : cn("shadow-sm active:shadow-md dark:shadow-slate-900/30", priorityConfig[todo.priority].borderColor)
                   )}
                 >
                   <div className="p-3 sm:p-4">
@@ -465,11 +435,11 @@ export default function Home() {
                             "w-2 h-2 rounded-full flex-shrink-0",
                             todo.priority === 'HIGH' && "bg-red-500",
                             todo.priority === 'MEDIUM' && "bg-amber-500",
-                            todo.priority === 'LOW' && "bg-slate-400"
+                            todo.priority === 'LOW' && "bg-slate-400 dark:bg-slate-500"
                           )} />
                           <h3
                             className={cn(
-                              "font-medium text-slate-800 dark:text-white transition-all text-base sm:text-base cursor-pointer truncate",
+                              "font-medium text-slate-800 dark:text-slate-100 transition-all text-base sm:text-base cursor-pointer truncate",
                               todo.status === 'COMPLETE' && "line-through text-slate-400 dark:text-slate-500"
                             )}
                             onClick={() => toggleExpand(todo.id)}
@@ -483,20 +453,20 @@ export default function Home() {
                       <div className="hidden sm:flex items-center gap-2">
                         {/* Edit Button */}
                         <button
-                          onClick={() => openEditModal(todo)}
-                          className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center hover:bg-violet-50 dark:hover:bg-violet-900/30 active:bg-violet-100 dark:active:bg-violet-900/50 text-slate-400 hover:text-violet-500 dark:hover:text-violet-400 transition-colors"
+                          onClick={() => startEdit(todo)}
+                          className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-violet-500 dark:hover:text-violet-400 transition-colors"
                           title="Bearbeiten"
                         >
                           <Pencil className="w-4 h-4" />
                         </button>
-
+                        
                         <Select
                           value={todo.priority}
                           onValueChange={(value) => updatePriority(todo.id, value as Priority)}
                         >
                           <SelectTrigger
                             className={cn(
-                              "w-auto border-0 font-medium text-sm h-9",
+                              "w-auto border-0 font-medium text-sm h-9 dark:border-slate-600",
                               priorityConfig[todo.priority].color,
                               priorityConfig[todo.priority].bgColor,
                               "hover:opacity-80 transition-opacity"
@@ -505,9 +475,9 @@ export default function Home() {
                             <Flag className="w-3.5 h-3.5 mr-1" />
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+                          <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
                             {Object.entries(priorityConfig).map(([key, config]) => (
-                              <SelectItem key={key} value={key} className="hover:bg-slate-100 dark:hover:bg-slate-700">
+                              <SelectItem key={key} value={key} className="dark:focus:bg-slate-700">
                                 <span className={config.color}>{config.label}</span>
                               </SelectItem>
                             ))}
@@ -520,7 +490,7 @@ export default function Home() {
                         >
                           <SelectTrigger
                             className={cn(
-                              "w-auto border-0 font-medium text-sm h-9",
+                              "w-auto border-0 font-medium text-sm h-9 dark:border-slate-600",
                               statusConfig[todo.status].color,
                               statusConfig[todo.status].bgColor,
                               "hover:opacity-80 transition-opacity"
@@ -528,9 +498,9 @@ export default function Home() {
                           >
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+                          <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
                             {Object.entries(statusConfig).map(([key, config]) => (
-                              <SelectItem key={key} value={key} className="hover:bg-slate-100 dark:hover:bg-slate-700">
+                              <SelectItem key={key} value={key} className="dark:focus:bg-slate-700">
                                 <span className={config.color}>{config.label}</span>
                               </SelectItem>
                             ))}
@@ -539,7 +509,7 @@ export default function Home() {
 
                         <button
                           onClick={() => setDeleteTodoId(todo.id)}
-                          className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-900/30 active:bg-red-100 dark:active:bg-red-900/50 text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                          className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-900/30 active:bg-red-100 text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
                         >
                           <X className="w-5 h-5" />
                         </button>
@@ -547,14 +517,12 @@ export default function Home() {
 
                       {/* Mobile */}
                       <div className="flex sm:hidden items-center gap-1">
-                        {/* Edit Button Mobile */}
                         <button
-                          onClick={() => openEditModal(todo)}
-                          className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center active:bg-violet-100 dark:active:bg-violet-900/50 text-slate-400 active:text-violet-500 transition-colors touch-manipulation"
+                          onClick={() => startEdit(todo)}
+                          className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center active:bg-slate-100 dark:active:bg-slate-700 text-slate-400 active:text-violet-500 transition-colors touch-manipulation"
                         >
                           <Pencil className="w-5 h-5" />
                         </button>
-
                         <button
                           onClick={() => cyclePriority(todo.id, todo.priority)}
                           className={cn(
@@ -582,7 +550,7 @@ export default function Home() {
 
                         <button
                           onClick={() => setDeleteTodoId(todo.id)}
-                          className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center active:bg-red-100 dark:active:bg-red-900/50 text-slate-400 active:text-red-500 transition-colors touch-manipulation"
+                          className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center active:bg-red-100 dark:active:bg-red-900/30 text-slate-400 active:text-red-500 transition-colors touch-manipulation"
                         >
                           <X className="w-5 h-5" />
                         </button>
@@ -632,10 +600,10 @@ export default function Home() {
           {!isLoading && todos.length > 0 && (
             <div className="mt-6 sm:mt-8 flex flex-wrap justify-center gap-2 sm:gap-4 text-sm sm:text-base text-slate-500 dark:text-slate-400">
               <span className="bg-white dark:bg-slate-800 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700">
-                <strong className="text-slate-700 dark:text-white">{todos.filter(t => t.status !== 'COMPLETE').length}</strong> offen
+                <strong className="text-slate-700 dark:text-slate-200">{todos.filter(t => t.status !== 'COMPLETE').length}</strong> offen
               </span>
               <span className="bg-white dark:bg-slate-800 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700">
-                <strong className="text-slate-700 dark:text-white">{todos.filter(t => t.status === 'COMPLETE').length}</strong> erledigt
+                <strong className="text-slate-700 dark:text-slate-200">{todos.filter(t => t.status === 'COMPLETE').length}</strong> erledigt
               </span>
               <span className="bg-white dark:bg-slate-800 px-3 py-2 rounded-lg border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400">
                 <strong className="text-red-700 dark:text-red-400">{todos.filter(t => t.priority === 'HIGH' && t.status !== 'COMPLETE').length}</strong> mit hoher Priorität
@@ -647,15 +615,15 @@ export default function Home() {
 
       {/* Löschen Bestätigungsdialog */}
       <AlertDialog open={!!deleteTodoId} onOpenChange={() => setDeleteTodoId(null)}>
-        <AlertDialogContent className="max-w-[calc(100%-2rem)] sm:max-w-lg mx-4 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+        <AlertDialogContent className="max-w-[calc(100%-2rem)] sm:max-w-lg mx-4 dark:bg-slate-800 dark:border-slate-700">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-lg sm:text-xl text-slate-800 dark:text-white">Aufgabe löschen?</AlertDialogTitle>
-            <AlertDialogDescription className="text-sm sm:text-base text-slate-600 dark:text-slate-400">
+            <AlertDialogTitle className="text-lg sm:text-xl dark:text-slate-100">Aufgabe löschen?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm sm:text-base dark:text-slate-400">
               Diese Aktion kann nicht rückgängig gemacht werden. Die Aufgabe wird dauerhaft gelöscht.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
-            <AlertDialogCancel className="w-full sm:w-auto h-11 sm:h-10 bg-slate-100 dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-700 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-600">Abbrechen</AlertDialogCancel>
+            <AlertDialogCancel className="w-full sm:w-auto h-11 sm:h-10 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100">Abbrechen</AlertDialogCancel>
             <AlertDialogAction
               onClick={deleteTodo}
               className="w-full sm:w-auto h-11 sm:h-10 bg-red-500 hover:bg-red-600"
@@ -666,12 +634,12 @@ export default function Home() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Edit Modal */}
-      <Dialog open={!!editTodo} onOpenChange={() => setEditTodo(null)}>
-        <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-lg mx-4 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+      {/* Bearbeiten Dialog */}
+      <Dialog open={!!editTodoId} onOpenChange={(open) => !open && cancelEdit()}>
+        <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-lg mx-4 dark:bg-slate-800 dark:border-slate-700">
           <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl text-slate-800 dark:text-white">Aufgabe bearbeiten</DialogTitle>
-            <DialogDescription className="text-sm sm:text-base text-slate-600 dark:text-slate-400">
+            <DialogTitle className="text-lg sm:text-xl dark:text-slate-100">Aufgabe bearbeiten</DialogTitle>
+            <DialogDescription className="dark:text-slate-400">
               Ändere den Titel und die Beschreibung der Aufgabe.
             </DialogDescription>
           </DialogHeader>
@@ -679,40 +647,38 @@ export default function Home() {
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Titel</label>
               <Input
-                placeholder="Aufgabentitel..."
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
-                className="bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                placeholder="Aufgabentitel..."
+                className="dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Beschreibung</label>
               <Textarea
-                placeholder="Beschreibung (optional)"
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
-                className="min-h-[120px] bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none"
+                placeholder="Beschreibung (optional)..."
+                className="min-h-[100px] dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100"
               />
             </div>
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
-            <Button 
-              variant="outline" 
-              onClick={() => setEditTodo(null)}
-              className="w-full sm:w-auto h-11 sm:h-10 bg-slate-100 dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-700 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-600"
+            <Button
+              variant="outline"
+              onClick={cancelEdit}
+              className="w-full sm:w-auto dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100"
             >
               Abbrechen
             </Button>
             <Button
               onClick={saveEdit}
               disabled={!editTitle.trim() || isSaving}
-              className="w-full sm:w-auto h-11 sm:h-10 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white"
+              className="w-full sm:w-auto bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700"
             >
               {isSaving ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Check className="w-4 h-4 mr-2" />
-              )}
+              ) : null}
               Speichern
             </Button>
           </DialogFooter>
