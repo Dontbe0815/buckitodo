@@ -10,25 +10,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum TodoStatus {
-  TODO
-  IN_PROGRESS
-  BUGS
-  COMPLETE
-}
-
-enum Priority {
-  LOW
-  MEDIUM
-  HIGH
-}
-
 model Todo {
-  id          String     @id @default(cuid())
+  id          String   @id @default(cuid())
   title       String
   description String?
-  status      TodoStatus @default(TODO)
-  priority    Priority   @default(MEDIUM)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  status      String   @default("TODO")
+  priority    String   @default("MEDIUM")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
