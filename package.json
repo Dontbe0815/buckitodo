@@ -1,10 +1,10 @@
 {
   "name": "team-todo-app",
-  "version": "1.0.8",
+  "version": "1.0.13",
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma db push && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint .",
     "postinstall": "prisma generate"
